@@ -6,6 +6,7 @@ import { buildGarage } from './world/garage.js';
 import { placeParkedCars, createPlayer } from './world/cars.js';
 import { createSmoke } from './fx/smoke.js';
 import { createSkids } from './fx/skids.js';
+import { createSuspension } from './fx/suspension.js';
 import { car, resetCar, physStep, steerMax } from './physics/car.js';
 import { createManeuvers, MAN } from './game/maneuvers.js';
 import { state } from './game/state.js';
@@ -50,6 +51,7 @@ function boot() {
   const P = createPlayer(scene);
   const smoke = createSmoke(scene);
   const skids = createSkids(scene);
+  const suspension = createSuspension();
 
   /* ---------- game ---------- */
   const man = createManeuvers({ onFinish: finish });
@@ -70,7 +72,7 @@ function boot() {
   let countT = 0;
   function start(m) {
     initAudio();
-    state.lastMode = m; resetCar(); man.reset(); skids.clear();
+    state.lastMode = m; resetCar(); man.reset(); skids.clear(); suspension.reset();
     camYaw = car.th; snapCam = true;
     menu.showMenu(false); menu.showResult(false);
     hud.showHud(true); showTouch(true);
@@ -174,8 +176,10 @@ function boot() {
     const c = Math.cos(car.th), s = Math.sin(car.th);
     P.root.position.set(car.x, 0, car.z);
     P.root.rotation.y = -car.th;
-    const roll = clamp(-car.w * car.vL * 0.006, -0.07, 0.07);
-    const pitch = clamp(car.accel * 0.0035, -0.06, 0.05);
+    // target poses from the physics; the body reaches them through a damped spring
+    const rollT = clamp(-car.w * car.vL * 0.006, -0.07, 0.07);
+    const pitchT = clamp(car.accel * 0.0035, -0.06, 0.05);
+    const { pitch, roll } = suspension.update(dt, pitchT, rollT);
     P.body.rotation.set(roll, 0, pitch);
     const dmax = steerMax(car.vL);
     for (const f of P.fronts) f.rotation.y = -car.steer * dmax;

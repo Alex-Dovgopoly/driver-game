@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Car viewer</title>
+<style>html,body{margin:0;height:100%;background:#2a2622;overflow:hidden}canvas{display:block}
+#hint{position:fixed;left:12px;top:10px;color:#ddd;font:14px sans-serif}</style>
+</head>
+<body>
+<div id="hint">drag — orbit · wheel — zoom · 1/2/3/4 — presets · G — garage light</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { makeHeroCar } from '../src/world/hero.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a2622);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.7, 0);
+const presets = {
+  Digit1: [6.5, 2.6, 5.2],   // front three-quarter
+  Digit2: [0, 1.2, 8],       // side
+  Digit3: [-6.5, 2.6, -5.2], // rear three-quarter
+  Digit4: [0.01, 9, 0.01]    // top
+};
+const setCam = p => { camera.position.set(...p); controls.update(); };
+setCam(presets.Digit1);
+addEventListener('keydown', e => { if (presets[e.code]) setCam(presets[e.code]); if (e.code === 'KeyG') garage = !garage; applyLight(); });
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x6a645a, roughness: 0.92 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const hemi = new THREE.HemisphereLight(0xffe3b8, 0x2a2016, 0.5); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe2b0, 0.55); sun.position.set(8, 40, 6); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
+const fill = new THREE.PointLight(0xffd59a, 0.55, 26, 1.6); fill.position.set(3, 4, 4); scene.add(fill);
+const studio = new THREE.DirectionalLight(0xffffff, 0.6); studio.position.set(-6, 8, -4); scene.add(studio);
+let garage = true;
+function applyLight() { studio.visible = !garage; hemi.intensity = garage ? 0.5 : 0.9; }
+applyLight();
+
+const car = makeHeroCar(scene);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+</script>
+</body>
+</html>

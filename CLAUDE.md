@@ -63,7 +63,9 @@ src/physics/collide.js   — obstacles (AABB в плоскости XZ), addBox, 
 src/world/constants.js   — GW×GD = 100×44 м, CEIL 4.6, ROWS, PX, START
 src/world/textures.js    — makeCanvas, texFrom, speckle, blotches (процедурные канвасы)
 src/world/garage.js      — buildGarage(scene): пол, стены, декали, колонны, потолок, свет
-src/world/cars.js        — makeCar, placeParkedCars, createPlayer (фара-спот)
+src/world/cars.js        — makeCar (припаркованные), placeParkedCars, createPlayer (фара-спот)
+src/world/hero.js        — машина игрока: Buick Skylark '71–72, выдавленные боковые профили + детали
+dev/car.html             — просмотрщик машины игрока с орбитальной камерой (только dev, в сборку не входит)
 src/fx/smoke.js          — пул из 90 спрайтов дыма
 src/fx/skids.js          — InstancedMesh следов шин (кольцевой буфер 1400)
 src/fx/suspension.js     — визуальная подвеска: пружина с демпфером для клевка и крена кузова
@@ -113,6 +115,9 @@ npm run dev        # http://localhost:5173
 npm run build      # dist/
 npm run preview
 ```
+
+Просмотр модели машины со всех сторон: http://localhost:5173/dev/car.html
+(1–4 — пресеты камеры, G — студийный/гаражный свет).
 
 Проверка в браузере: вкладка должна быть видимой — в фоновой вкладке
 `requestAnimationFrame` замирает, и игра стоит (так и в прототипе).

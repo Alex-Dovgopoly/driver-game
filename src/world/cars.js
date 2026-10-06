@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HX, HZ } from './constants.js';
 import { addBox } from '../physics/collide.js';
+import { makeHeroCar } from './hero.js';
 
 const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c6, roughness: 0.22, metalness: 1 });
 const rubberMat = new THREE.MeshStandardMaterial({ color: 0x141210, roughness: 0.9 });
@@ -76,7 +77,7 @@ export function placeParkedCars(scene) {
 
 /* the player's car with its headlight */
 export function createPlayer(scene) {
-  const P = makeCar(scene, 0x7a1f16, true);
+  const P = makeHeroCar(scene);
   const head = new THREE.SpotLight(0xfff0c8, 1.3, 34, 0.52, 0.55, 1.2);
   head.position.set(2.4, 0.75, 0); P.root.add(head);
   const headTarget = new THREE.Object3D(); headTarget.position.set(14, -0.6, 0); P.root.add(headTarget); head.target = headTarget;

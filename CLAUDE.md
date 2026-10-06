@@ -64,8 +64,10 @@ src/world/constants.js   — GW×GD = 100×44 м, CEIL 4.6, ROWS, PX, START
 src/world/textures.js    — makeCanvas, texFrom, speckle, blotches (процедурные канвасы)
 src/world/garage.js      — buildGarage(scene): пол, стены, декали, колонны, потолок, свет
 src/world/cars.js        — makeCar (припаркованные), placeParkedCars, createPlayer (фара-спот)
-src/world/hero.js        — машина игрока: Buick Skylark '71–72, выдавленные боковые профили + детали
+src/world/heroModel.js   — машина игрока: loadHeroCar грузит public/models/skylark.glb, пивоты колёс, fallback на hero.js
+src/world/hero.js        — процедурный Skylark (запасной вариант и dev/car.html)
 dev/car.html             — просмотрщик машины игрока с орбитальной камерой (только dev, в сборку не входит)
+dev/glb.html             — тот же просмотрщик для public/models/skylark.glb (W — крутит колёса)
 src/fx/smoke.js          — пул из 90 спрайтов дыма
 src/fx/skids.js          — InstancedMesh следов шин (кольцевой буфер 1400)
 src/fx/suspension.js     — визуальная подвеска: пружина с демпфером для клевка и крена кузова
@@ -74,6 +76,9 @@ src/ui/hud.js            — таймер, спидометр, список ма
 src/ui/menu.js           — оверлеи меню и результата, кнопки
 src/ui/input.js          — Set кодов клавиш + touchK, readInputs(live)
 src/ui/touch.js          — тач-кнопки (body.touch при pointer: coarse)
+assets/blender/build_skylark.py — скрипт, который строит модель Skylark в Blender и экспортирует glb
+assets/blender/skylark.blend    — результат скрипта (не правится руками, пересобирается скриптом)
+public/models/skylark.glb       — экспорт для three.js; иерархия Skylark → Body, Wheel_FL/FR/RL/RR
 ```
 
 **Режимы** (`state.mode`): `menu` → `count` (3-2-1) → `play` → `over`;
@@ -88,6 +93,13 @@ Enter — старт из меню или повтор с экрана резу�
 (±22). `car.th` — курс в радианах, ось X = 0; для three берётся
 `rotation.y = -car.th`. Коллизии: три окружности радиуса 0.98 вдоль
 оси машины (±1.55, 0) против AABB-препятствий, два прохода.
+
+**Машина игрока:** glb строится скриптом `assets/blender/build_skylark.py`
+(реальные размеры: база 2.845 м, длина 5.23 м, ширина 1.95 м). Физика
+(`WB = 2.8`, круги коллизий ±1.55/0.98) осталась от прототипа и под модель
+не перенастраивалась. `loadHeroCar` отдаёт `{root, body, wheels, fronts,
+tailMat, headMat}` сразу, контент появляется после загрузки; порядок колёс
+FR, FL, RR, RL (задние — индексы ≥ 2).
 
 **Связи между модулями:** `maneuvers` импортирует `hud`, `audio`, `state`,
 `car`; `main` отдаёт в `createManeuvers` колбэк `onFinish`. `hud`

@@ -194,8 +194,8 @@ function boot() {
     skidAmt += ((skidding ? (car.spin ? 1 : clamp(Math.abs(car.vS) / 8 + (hb ? 0.5 : 0) + (hardBrake ? 0.5 : 0), 0, 1)) : 0) - skidAmt) * Math.min(1, dt * 10);
     const rx = -s, rz = c;
     for (let i = 0; i < 2; i++) {
-      const side = i ? 0.9 : -0.9;
-      const wx = car.x - c * 1.45 + rx * side, wz = car.z - s * 1.45 + rz * side;
+      const side = i ? 0.8 : -0.8;                       // rear tyre centres of the glb model
+      const wx = car.x - c * 1.42 + rx * side, wz = car.z - s * 1.42 + rz * side;
       skids.markAt(i, wx, wz, skidding && state.mode !== 'menu');
       const smokeRate = car.spin ? 0.7 : (sliding && car.speed > 6 ? 0.25 : (hb && car.speed > 8 ? 0.2 : 0));
       if (Math.random() < smokeRate) smoke.puff(wx, wz, car.spin ? 1 : 0.6);

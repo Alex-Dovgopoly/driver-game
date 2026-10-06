@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Interview — гаражный тест</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:ital,wght@0,400;0,600;0,800;1,800&family=Shrikhand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="gl" aria-label="3D-гараж"></canvas>
+
+<div id="hud">
+  <div id="timer" class="hud">1:00<small>осталось</small></div>
+  <div id="list" class="hud"><div id="strikes"></div><ul id="man"></ul></div>
+  <div id="speedo" class="hud">0<small>км/ч</small></div>
+  <div id="keys" class="hud"><kbd>C</kbd> камера · <kbd>M</kbd> звук · <kbd>R</kbd> заново · <kbd>Esc</kbd> меню</div>
+  <div id="toast" class="hud"></div>
+</div>
+
+<div id="menu" class="ov on">
+  <div class="wrap">
+    <h1 class="mark">The Interview</h1>
+    <p class="lede">Подземный гараж, Майами, 1978. Люди, которым нужен водитель, смотрят с лестницы. У тебя шестьдесят секунд на девять манёвров. Четвёртый удар о машину, стену или колонну — и разговор окончен.</p>
+    <div class="btns">
+      <button class="b" id="bStart">Начать собеседование</button>
+      <button class="b alt" id="bTrain">Тренировка без таймера</button>
+    </div>
+    <div class="cols">
+      <section>
+        <h2>Управление</h2>
+        <dl>
+          <dt><kbd>W</kbd> <kbd>↑</kbd></dt><dd>газ</dd>
+          <dt><kbd>S</kbd> <kbd>↓</kbd></dt><dd>тормоз, затем задний ход</dd>
+          <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>руль</dd>
+          <dt><kbd>Пробел</kbd></dt><dd>ручник</dd>
+          <dt><kbd>Shift</kbd></dt><dd>бёрнаут на месте</dd>
+          <dt><kbd>C</kbd> <kbd>M</kbd></dt><dd>камера, звук</dd>
+          <dt><kbd>R</kbd> <kbd>Esc</kbd></dt><dd>заново, меню</dd>
+        </dl>
+      </section>
+      <section>
+        <h2>Как выполнить манёвры</h2>
+        <dl id="howto"></dl>
+      </section>
+    </div>
+    <p class="note">Фанатская учебная реконструкция механики гаражного теста из гонок конца 90-х. Вся графика, звук и машины сделаны с нуля.</p>
+  </div>
+</div>
+
+<div id="result" class="ov">
+  <div class="wrap">
+    <h1 class="res-title" id="rTitle">Принят</h1>
+    <p class="lede" id="rText"></p>
+    <div class="btns">
+      <button class="b" id="bAgain">Ещё раз</button>
+      <button class="b alt" id="bMenu">В меню</button>
+    </div>
+  </div>
+</div>
+
+<div id="touch">
+  <div class="tg"><button class="big" data-k="left" aria-label="Влево">◀</button><button class="big" data-k="right" aria-label="Вправо">▶</button></div>
+  <div class="tg r">
+    <button data-k="burn">Burn</button><button data-k="hand">Ручник</button>
+    <button class="big" data-k="brake">Тормоз</button><button class="big" data-k="gas">Газ</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

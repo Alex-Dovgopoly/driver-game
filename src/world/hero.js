@@ -3,12 +3,13 @@ import * as THREE from 'three';
 /*
  * The player's car: a 1971–72 Buick Skylark hardtop coupe, built procedurally.
  * Long hood, cabin set back, vinyl roof with a wide sloping C-pillar, quad round
- * headlights beside a wide grille, chrome bumpers with the tail lights set into
- * the rear one, grey mag wheels. Same footprint and wheel positions as makeCar()
- * so the physics, collision circles and camera stay untouched.
+ * headlights beside a wide grille, wrap-around chrome bumpers with the tail lights
+ * set into the rear one, grey mag wheels. Same footprint and wheel positions as
+ * makeCar() so the physics, collision circles and camera stay untouched.
  *
- * Car space: +X forward, +Y up, +Z right. The side profiles below are drawn in XY
- * and extruded along Z (width).
+ * Car space: +X forward, +Y up, +Z right. Side profiles are drawn in XY and
+ * extruded along Z (width); the plan-view taper and the glasshouse tumblehome are
+ * then applied by deforming vertices, so every piece stays flush with the shell.
  */
 
 // no environment map in the scene, so fully metallic surfaces render almost black: keep metalness moderate
@@ -22,6 +23,7 @@ const grilleMat = new THREE.MeshStandardMaterial({ color: 0x1a1816, roughness: 0
 
 export const HERO_PAINT = 0x1b2a52;
 
+/* ---------- geometry helpers ---------- */
 function profile(points) {
   const s = new THREE.Shape();
   s.moveTo(points[0][0], points[0][1]);
@@ -38,6 +40,30 @@ function extrude(shape, width, bevel = 0.03) {
   g.translate(0, 0, -depth / 2);
   return g;
 }
+/* run fn(v) over every vertex, then rebuild normals */
+function deform(geo, fn) {
+  const p = geo.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); fn(v); p.setXYZ(i, v.x, v.y, v.z); }
+  p.needsUpdate = true; geo.computeVertexNormals();
+  return geo;
+}
+
+/* plan-view half-width multiplier along the length: full through the doors,
+   tapering towards both ends, with rounded corners at the very tips */
+export function planW(x) {
+  const ax = Math.abs(x);
+  const taper = x > 0 ? 0.90 : 0.94;                       // nose narrower than the tail
+  const k = Math.min(1, Math.max(0, (ax - 1.6) / 1.0)) ** 2;
+  let w = 1 - (1 - taper) * k;
+  const u = (ax - 2.30) / 0.30;                            // corner rounding over the last 30 cm
+  if (u > 0) w *= 1 - 0.09 * (1 - Math.sqrt(Math.max(0, 1 - Math.min(1, u) ** 2)));
+  return w;
+}
+/* glasshouse leans inward above the belt line */
+const BELT = 0.98, TUMBLE = 0.14;
+const tumbleW = y => y > BELT ? 1 - TUMBLE * (y - BELT) : 1;
+const shellDeform = v => { v.z *= planW(v.x); };
+const glassDeform = v => { v.z *= planW(v.x) * tumbleW(v.y); };
 
 /* lower body: rear bumper line → ducktail → deck → belt line → hood → nose → floor with two wheel arches */
 function lowerBodyShape() {
@@ -61,6 +87,23 @@ function lowerBodyShape() {
   b.absarc(-1.45, 0.36, 0.45, 0, Math.PI, false);   // rear arch
   b.closePath();
   return b;
+}
+
+/* wrap-around bumper drawn in plan view (shape x = car x, shape y = car z), extruded up by height.
+   dir = +1 front, -1 rear. Returns geometry with its bottom at y = 0. */
+function bumperGeo(dir, height) {
+  const pts = [
+    [2.66, -0.80], [2.66, 0.80], [2.60, 0.95], [2.46, 1.03], [2.28, 1.03],   // outer face and swept-back ends
+    [2.28, 0.93], [2.44, 0.93], [2.54, 0.88], [2.56, 0.80],                  // inner face
+    [2.56, -0.80], [2.54, -0.88], [2.44, -0.93], [2.28, -0.93],
+    [2.28, -1.03], [2.46, -1.03], [2.60, -0.95]
+  ];
+  const s = profile(pts.map(([x, z]) => [x * dir, z]));
+  const bevel = 0.015;
+  const g = new THREE.ExtrudeGeometry(s, { depth: height - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2 });
+  g.rotateX(-Math.PI / 2);          // extrusion axis → +Y, shape y → -Z (symmetric, so fine)
+  g.translate(0, bevel, 0);
+  return g;
 }
 
 /* grey five-spoke mag with a polished lip; side = +1 right wheel, -1 left */
@@ -90,60 +133,75 @@ export function makeHeroCar(scene, color = HERO_PAINT) {
     const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z);
     m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
   };
+  /* a box placed at (x, y, z) then run through the shell deformation so it hugs the taper */
+  const trim = (w, h, d, mat, x, y, z, fn = shellDeform) =>
+    add(deform(new THREE.BoxGeometry(w, h, d).translate(x, y, z), fn), mat);
+  const GW = 1.66, GZ = GW / 2;                           // glasshouse width at the belt
+  const gz = y => GZ * tumbleW(y);                         // glasshouse half-width at height y
 
   // --- shell ---
-  add(extrude(lowerBodyShape(), 1.95, 0.035), paint);
-  add(new THREE.BoxGeometry(4.2, 0.06, 1.7), dark, 0, 0.33);                       // floor pan / sills shadow
+  add(deform(extrude(lowerBodyShape(), 1.95, 0.035), shellDeform), paint);
+  add(new THREE.BoxGeometry(4.2, 0.06, 1.7), dark, 0, 0.33);                       // floor pan
   // greenhouse glass: windshield → roof → rear window
-  add(extrude(profile([[0.84, 0.985], [0.28, 1.42], [-0.70, 1.44], [-1.02, 1.36], [-1.60, 1.035]]), 1.66, 0.02), glass);
+  add(deform(extrude(profile([[0.84, 0.985], [0.28, 1.42], [-0.70, 1.44], [-1.02, 1.36], [-1.60, 1.035]]), GW, 0.02), glassDeform), glass);
   // vinyl roof cap
-  add(extrude(profile([[0.34, 1.395], [0.27, 1.45], [-0.70, 1.468], [-1.04, 1.385], [-1.08, 1.36], [-0.74, 1.43], [0.26, 1.41]]), 1.70, 0.01), vinyl);
-  // C-pillars (vinyl), one per side, sitting on the glass flanks
+  add(deform(extrude(profile([[0.34, 1.395], [0.27, 1.45], [-0.70, 1.468], [-1.04, 1.385], [-1.08, 1.36], [-0.74, 1.43], [0.26, 1.41]]), GW + 0.04, 0.01), glassDeform), vinyl);
+  // C-pillars (vinyl), one per side, flush with the glass flanks
   const cShape = profile([[-0.42, 1.44], [-0.70, 1.44], [-1.60, 1.035], [-1.14, 1.01]]);
-  for (const s of [-1, 1]) add(extrude(cShape, 0.26, 0.015), vinyl, 0, 0, s * 0.715);
-  // A-pillars
-  for (const s of [-1, 1]) {
-    const p = add(new THREE.BoxGeometry(0.72, 0.075, 0.07), paint, 0.56, 1.20, s * 0.80);
-    p.rotation.z = Math.atan2(1.42 - 0.975, 0.28 - 0.84);
-  }
+  for (const s of [-1, 1]) add(deform(extrude(cShape, 0.26, 0.015).translate(0, 0, s * (GZ - 0.13)), glassDeform), vinyl);
   // hood centre ridge and cowl vent
   add(new THREE.BoxGeometry(1.5, 0.025, 0.46), paint, 1.6, 0.955);
-  add(new THREE.BoxGeometry(0.16, 0.02, 1.3), dark, 0.95, 0.985);
+  trim(0.16, 0.02, 1.3, dark, 0.95, 0.985, 0);
+
+  // --- window surrounds (chrome) ---
+  const aAng = Math.atan2(1.42 - 0.985, 0.28 - 0.84);
+  for (const s of [-1, 1]) {
+    const a = add(new THREE.BoxGeometry(0.72, 0.06, 0.05), chrome, 0.56, 1.2, s * (gz(1.2) + 0.005));
+    a.rotation.z = aAng;                                                            // A-pillar / windshield side frame
+    trim(2.0, 0.025, 0.03, chrome, -0.1, 1.0, s * (gz(1.0) + 0.06));                 // belt-line moulding along the door tops
+    trim(0.98, 0.03, 0.03, chrome, -0.21, 1.46, s * (gz(1.46) + 0.035), glassDeform); // drip rail along the roof edge
+  }
+  trim(0.04, 0.03, 2 * gz(1.43), chrome, 0.27, 1.43, 0, glassDeform);                // windshield header
+  trim(0.05, 0.03, 2 * gz(0.99), chrome, 0.86, 0.995, 0);                            // windshield base
+  trim(0.04, 0.03, 2 * gz(1.43) - 0.52, chrome, -0.71, 1.445, 0, glassDeform);       // rear window header (between C-pillars)
+  trim(0.05, 0.03, 2 * gz(1.04) - 0.52, chrome, -1.62, 1.045, 0);                    // rear window base
 
   // --- chrome ---
-  add(new THREE.BoxGeometry(0.12, 0.17, 2.02), chrome, 2.58, 0.57);                 // front bumper
-  add(new THREE.BoxGeometry(0.12, 0.26, 2.02), chrome, -2.58, 0.66);                // rear bumper
+  add(bumperGeo(1, 0.17), chrome, 0, 0.485);                                        // front bumper
+  add(bumperGeo(-1, 0.26), chrome, 0, 0.53);                                        // rear bumper
   for (const s of [-1, 1]) {
-    add(new THREE.BoxGeometry(3.3, 0.035, 0.02), chrome, -0.1, 0.395, s * 0.99);   // rocker trim
-    add(new THREE.BoxGeometry(0.16, 0.025, 0.03), chrome, 0.05, 0.84, s * 0.99);   // door handle
+    trim(3.3, 0.035, 0.02, chrome, -0.1, 0.395, s * 0.99);                           // rocker trim
+    add(new THREE.BoxGeometry(0.16, 0.025, 0.03), chrome, 0.05, 0.84, s * 0.99);    // door handle
   }
-  add(new THREE.BoxGeometry(0.07, 0.085, 0.12), chrome, 0.55, 1.09, -1.02);        // driver's mirror
+  const stalk = add(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8), chrome, 0.55, 1.03, -1.0);
+  stalk.rotation.x = Math.PI / 2; stalk.rotation.z = 0.3;                            // mirror stalk
+  add(new THREE.BoxGeometry(0.06, 0.09, 0.13), chrome, 0.55, 1.08, -1.07);          // driver's mirror
   for (const s of [-1, 1]) {
-    const e = add(new THREE.CylinderGeometry(0.035, 0.035, 0.18, 10), chrome, -2.36, 0.27, s * 0.55);
+    const e = add(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 10), chrome, -2.40, 0.27, s * 0.55);
     e.rotation.z = Math.PI / 2;                                                     // exhaust tips
   }
 
   // --- face ---
-  add(new THREE.BoxGeometry(0.03, 0.04, 1.92), chrome, 2.575, 0.845);              // chrome strip under the hood lip
-  add(new THREE.BoxGeometry(0.03, 0.24, 1.92), paint, 2.55, 0.73);                  // fascia panel
-  add(new THREE.BoxGeometry(0.03, 0.24, 1.0), chrome, 2.575, 0.73);                 // grille frame
-  add(new THREE.BoxGeometry(0.03, 0.19, 0.92), grilleMat, 2.585, 0.73);             // grille
+  trim(0.04, 0.035, 1.92, chrome, 2.615, 0.838, 0);                                 // chrome strip under the hood lip
+  trim(0.03, 0.24, 1.92, paint, 2.55, 0.73, 0);                                     // fascia panel
+  add(new THREE.BoxGeometry(0.03, 0.24, 0.9), chrome, 2.575, 0.73);                 // grille frame
+  add(new THREE.BoxGeometry(0.03, 0.19, 0.82), grilleMat, 2.585, 0.73);             // grille
   const headMat = new THREE.MeshStandardMaterial({ color: 0xfff4d6, emissive: 0xfff0c0, emissiveIntensity: 1.8 });
-  const lampGeo = new THREE.CylinderGeometry(0.085, 0.085, 0.05, 18).rotateZ(Math.PI / 2);
-  const bezelGeo = new THREE.CylinderGeometry(0.108, 0.108, 0.04, 18).rotateZ(Math.PI / 2);
-  for (const s of [-1, 1]) for (const z of [0.60, 0.815]) {
+  const lampGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.05, 18).rotateZ(Math.PI / 2);
+  const bezelGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.04, 18).rotateZ(Math.PI / 2);
+  for (const s of [-1, 1]) for (const z of [0.55, 0.75]) {
     add(bezelGeo, chrome, 2.585, 0.73, s * z);
     add(lampGeo, headMat, 2.605, 0.73, s * z);
   }
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.02, 0.06, 0.14), new THREE.MeshStandardMaterial({ color: 0xe8a040, emissive: 0xc06010, emissiveIntensity: 0.4 }), 2.0, 0.70, s * 0.985); // side markers
+  for (const s of [-1, 1]) trim(0.02, 0.06, 0.14, new THREE.MeshStandardMaterial({ color: 0xe8a040, emissive: 0xc06010, emissiveIntensity: 0.4 }), 2.0, 0.70, s * 0.985); // side markers
 
   // --- tail ---
   const tailMat = new THREE.MeshStandardMaterial({ color: 0x7a0c08, emissive: 0xff2010, emissiveIntensity: 0.6 });
   for (const s of [-1, 1]) {
-    add(new THREE.BoxGeometry(0.03, 0.10, 0.62), tailMat, -2.645, 0.69, s * 0.56);
-    add(new THREE.BoxGeometry(0.02, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xf0f0e0 }), -2.65, 0.69, s * 0.40); // reverse lamp
+    add(new THREE.BoxGeometry(0.03, 0.10, 0.56), tailMat, -2.675, 0.69, s * 0.52);
+    add(new THREE.BoxGeometry(0.02, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xf0f0e0 }), -2.68, 0.69, s * 0.36); // reverse lamp
   }
-  add(new THREE.BoxGeometry(0.02, 0.13, 0.30), new THREE.MeshStandardMaterial({ color: 0x1e3b8a, roughness: 0.6 }), -2.65, 0.62, 0); // plate
+  add(new THREE.BoxGeometry(0.02, 0.13, 0.30), new THREE.MeshStandardMaterial({ color: 0x1e3b8a, roughness: 0.6 }), -2.68, 0.62, 0); // plate
 
   // --- wheels ---
   const wheels = [], fronts = [];

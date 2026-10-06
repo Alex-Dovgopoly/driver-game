@@ -24,7 +24,8 @@ export function physStep(dt, I, onHit) {
   const speed = Math.hypot(vL, vS);
   if (I.hand && !car.hand) car.hbSign = vL >= 0 ? 1 : -1;
   car.hand = I.hand;
-  const spinning = I.burn && speed < 6 && !I.hand;
+  // burnout: dedicated key, or gas and brake held together (brake-stand); only at low speed and without handbrake
+  const spinning = (I.burn || (I.gas && I.brake)) && speed < 6 && !I.hand;
   car.spin = spinning;
   let a = 0;
   if (spinning) {

@@ -185,7 +185,7 @@ function boot() {
     for (const f of P.fronts) f.rotation.y = -car.steer * dmax;
     const roll1 = car.vL * dt / 0.36;
     P.wheels.forEach((w, i) => { w.rotation.z -= (i >= 2 && car.spin) ? 0.9 : roll1; });
-    P.tailMat.emissiveIntensity = car.brakeHeld && car.vL > 0.3 ? 2.4 : (car.vL < -0.3 ? 1.4 : 0.6);
+    P.tailMat.emissiveIntensity = car.brakeHeld && (car.vL > 0.3 || car.spin) ? 2.4 : (car.vL < -0.3 ? 1.4 : 0.6);
     // skid & smoke
     const sliding = Math.abs(car.vS) > 3;
     const hb = car.hand && car.speed > 2;

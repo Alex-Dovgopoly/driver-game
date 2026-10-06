@@ -6,11 +6,11 @@ import { toast, buildList, refreshList } from '../ui/hud.js';
 import { blip, thud } from '../audio.js';
 
 export const MAN = [
-  { id: 'burnout', name: 'Burnout', how: 'стоя на месте, зажми Shift на секунду' },
+  { id: 'burnout', name: 'Burnout', how: 'стоя на месте, зажми Shift или газ и тормоз вместе на секунду' },
   { id: 'handbrake', name: 'Handbrake', how: 'разгонись больше 45 км/ч и дёрни ручник' },
   { id: 'slalom', name: 'Slalom', how: 'змейкой мимо колонн одного ряда туда и обратно' },
   { id: 'r180', name: '180°', how: 'на скорости ручник и руль, развернись на месте' },
-  { id: 'r360', name: '360°', how: 'Shift и руль — крутись вокруг себя' },
+  { id: 'r360', name: '360°', how: 'бёрнаут (Shift или газ+тормоз) и руль — крутись вокруг себя' },
   { id: 'rev180', name: 'Reverse 180°', how: 'разгонись задом и резко поверни, можно с ручником' },
   { id: 'speed', name: 'Speed', how: 'разгонись до 80 км/ч' },
   { id: 'brake', name: 'Brake test', how: 'с 55+ км/ч тормози до полной остановки, без ручника' },
